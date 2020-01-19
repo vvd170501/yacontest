@@ -58,6 +58,7 @@ class Client():
         soup = BS(r.text, "html.parser")
         link = soup.find('a', class_='link_access_login')
         if not link:
+            #TODO check if contest is not available
             print('ERROR: Cannot login, try again...')
             sys.exit(1)
         authpath = link['href']
@@ -74,7 +75,8 @@ class Client():
             data['password'] = getpass()
         r = self.http.post(url, data=data)
         if urlparse(r.url).path == '/login/':
-            print('Error: Incorrect login or password, try again')
+            print('ERROR: Incorrect login or password, try again')
+            print(f'Your login is "{self.cfg["login"]}". If it\'s incorrect, run "yacontest config"')
             self.cfg['password'] = ''
             set_cfg(self.cfg)
             sys.exit(1)

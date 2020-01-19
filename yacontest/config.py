@@ -28,6 +28,9 @@ def create():
     if cfg is not None:
         if not input('Config already exists, overwrite? [yN]: ').lower().startswith('y'):
             return
+        contest = cfg['contest']
+    else:
+        contest = 0
     print('Choose the domain:\n1) official.contest.yandex.ru\n2) contest.yandex.ru')
     choice = input('Domain (1/2): ')
     if choice == '1':
@@ -42,7 +45,7 @@ def create():
         password = getpass()
     else:
         password = ""
-    set_cfg({'domain': domain, 'login': login, 'password': password, 'contest': 0})
+    set_cfg({'domain': domain, 'login': login, 'password': password, 'contest': contest})
 
 
 def select(contest_id):
