@@ -38,10 +38,7 @@ def _send(args, wait):
         print('ERROR: Not enough options, check usage')
         sys.exit(1)
     fname, problem = args[:2]
-    if not problem.isnumeric():
-        print('ERROR: Problem id is not a number')
-        sys.exit(1)
-    Client().submit(int(problem), fname, wait)
+    Client().submit(problem, fname, wait)
 
 
 
@@ -69,10 +66,7 @@ def status(args):
         print('ERROR: Problem id is not specified')
         sys.exit(1)
     problem = args[0]
-    if not problem.isnumeric():
-        print('ERROR: Problem id is not a number')
-        sys.exit(1)
-    Client().show_status(int(problem))
+    Client().show_status(problem)
 
 
 def main():

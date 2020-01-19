@@ -9,8 +9,6 @@ from bs4 import BeautifulSoup as BS
 
 from .config import get_cfg, set_cfg
 
-#TODO use string problem ids
-
 
 class SolutionStatus():
     def __init__(self, titles, values):
@@ -28,7 +26,7 @@ class SolutionStatus():
             elif k == 'Баллы':
                 self.score = v if v != '-' else ''
         self.testing = self.text == 'Тестируется'
-        self.checked = not self.testing and not self.text.startswith('Ожидание') #TODO check this
+        self.checked = not self.testing and not self.text.startswith('Ожидание') #TODO check correctness
 
     def __str__(self):
         msg = f'SOlution {self.sid}: {self.text}, Time: {self.time}, Mem: {self.mem}'
@@ -99,9 +97,9 @@ class Client():
 
     def _get_status(self, problem):
         try:
-            url = self._get_problems()[problem - 1]
-        except IndexError:
-            print(f'Invalid problem id, max id is {len(self._get_problems())}')
+            url = self._get_problems()[problem]
+        except KeyError:
+            print(f'Invalid problem id, available problems: {", ".join(self._get_problems().keys())}')
             sys.exit(1)
         r = self._req_get(url, params={'ajax': 'submit-table'})
         soup = BS(r.json()['result'], "html.parser")
@@ -121,20 +119,21 @@ class Client():
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")
         problems = soup.find_all('ul')[-1]
-        self.problems = ['https://' + self.domain + e.find('a')['href'] for e in problems.find_all('li')]
+        self.problems = {e.find('a')['href'].split('/')[-2].lower(): 'https://' + self.domain + e.find('a')['href'] for e in problems.find_all('li')} #TODO optimize? check keys (url without trailing /)
         self.cfg['problems'] = self.problems
         set_cfg(self.cfg)
         return self.problems
         
 
     def submit(self, problem, filename, wait):
+        problem = problem.lower()
         if not os.path.isfile(filename):
             print('ERROR: File not found')
             sys.exit(1)
         try:
-            url = self._get_problems()[problem - 1]
-        except IndexError:
-            print(f'Invalid problem id, max id is {len(self._get_problems())}')
+            url = self._get_problems()[problem]
+        except KeyError:
+            print(f'Invalid problem id, available problems: {", ".join(self._get_problems().keys())}')
             sys.exit(1)
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")
@@ -174,7 +173,7 @@ class Client():
             print(status)
 
     def show_leaderboard(self, page=1):
-        #TODO get additional info, print as a table
+        #TODO get additional info, print as a table?
         url = f'https://{self.domain}/contest/{self.contest}/standings/'
         params = {'p': page}
         r = self._req_get(url, params=params)
@@ -194,5 +193,6 @@ class Client():
         print('\n'.join(lines))
 
     def show_status(self, problem):
+        problem = problem.lower()
         status = self._get_status(problem)
         print(status)

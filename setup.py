@@ -13,7 +13,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='yacontest',
-    version='0.1.0',
+    version='1.0.0',
     description='console utility for Yandex.Contest',
     long_description=long_description,
     url='https://github.com/vvd170501/yacontest',
@@ -25,7 +25,7 @@ setup(
     },
     install_requires=['beautifulsoup4', 'requests'],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
