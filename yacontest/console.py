@@ -52,7 +52,7 @@ def send(args):
 
 def leaderboard(args):
     if not args:
-        page = '0'
+        page = '1'
     else:
         page = args[0]
         if not page.isnumeric():

@@ -85,14 +85,14 @@ class Client():
         r = self.http.get(url, params=params)
         if not self._check_result(r):
             self._update_cookies(r)
-            r = self.http.get(url)
+            r = self.http.get(url, params=params)
         return r
 
     def _req_post(self, url, params=None, data=None):
         r = self.http.post(url, params=params, data=data)
         if not self._check_result(r):
             self._update_cookies(r)
-            r = self.http.post(url, data=dat)
+            r = self.http.post(url, params=params, data=data)
         return r
 
     def _get_status(self, problem):
