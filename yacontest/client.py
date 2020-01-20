@@ -25,6 +25,7 @@ class SolutionStatus():
                 self.test = v if v != '-' else ''
             elif k == 'Баллы':
                 self.score = v if v != '-' else ''
+        self.ce = self.text == 'CE' or self.text == 'PCF'
         self.testing = self.text == 'Тестируется'
         self.checked = not self.testing and not self.text.startswith('Ожидание') #TODO check correctness
 
@@ -40,16 +41,19 @@ class SolutionStatus():
 class Client():
     def __init__(self):
         self.cfg = get_cfg()
-        self.http = requests.Session()
-        self.http.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36'
         self.domain = self.cfg['domain']
         self.contest = self.cfg['contest']
-        self.problems = self.cfg.get('problems')
         if self.contest == 0:
             print('ERROR: No contest was selected. Run "yacontest select <id>" first')
             sys.exit(1)
+        self.problems = self.cfg.get('problems')
+
+        self.http = requests.Session()
+        self.http.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36'
         if self.cfg.get('cookies') is not None:
             self.http.cookies = self.cfg['cookies']
+
+        self.prefix = f'https://{self.domain}/contest/{self.contest}'
 
     def _check_result(self, r):
         return urlparse(r.url).path != f'/contest/{self.contest}/enter/'
@@ -58,8 +62,8 @@ class Client():
         soup = BS(r.text, "html.parser")
         link = soup.find('a', class_='link_access_login')
         if not link:
-            #TODO check if contest is not available
-            print('ERROR: Cannot login, try again...')
+            print('ERROR: Contest is not available, check the URL:')
+            print(self.prefix + '/enter')
             sys.exit(1)
         authpath = link['href']
         url = f"https://{self.domain}{authpath}"
@@ -113,11 +117,20 @@ class Client():
         cells = [e.text for e in rows[1].find_all('td')]
         return SolutionStatus(titles, cells)
         
+    def _status_details(self, status):
+        url = self.prefix + f'/run-report/{status.sid}/'
+        r = self._req_get(url)
+        soup = BS(r.text, "html.parser")
+        details = [e.text.strip() for e in soup.find_all('pre')]
+        if not details:
+            details = ['No description available']
+        delim = '\n' + '-' * 20 + '\n'
+        return delim[1:] + delim.join(details) + delim[:-1]
 
     def _get_problems(self):
         if self.problems:
             return self.problems
-        url = f'https://{self.domain}/contest/{self.contest}/problems/'
+        url = self.prefix + '/problems/'
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")
         problems = soup.find_all('ul')[-1]
@@ -153,7 +166,7 @@ class Client():
                 file_field = name
             else:
                 formdata[name] = el['value']
-        url = f'https://{self.domain}/contest/{self.contest}/submit/'
+        url = self.prefix + '/submit/'
         r = self.http.post(url, data=formdata, files={file_field: (filename, open(filename, 'r'))})
         err = parse_qs(urlparse(r.url).query).get('error')
         if err:
@@ -173,10 +186,12 @@ class Client():
                 status = self._get_status(problem)
                 last_req = time()
             print(status)
+            if status.ce:
+                print(self._status_details(status))
 
     def show_leaderboard(self, page=1):
         #TODO get additional info, print as a table?
-        url = f'https://{self.domain}/contest/{self.contest}/standings/'
+        url = self.prefix + '/standings/'
         params = {'p': page}
         r = self._req_get(url, params=params)
         soup = BS(r.text, "html.parser")
@@ -198,3 +213,5 @@ class Client():
         problem = problem.lower()
         status = self._get_status(problem)
         print(status)
+        if status.ce:
+            print(self._status_details(status))
