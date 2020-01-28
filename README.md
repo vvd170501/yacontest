@@ -23,7 +23,9 @@ If the contest URL is https://official.contest.yandex.ru/contest/123, use `yacon
 
 #### Upload a solution
 `yacontest send <file> <problem id>` -- upload and exit
+
 `yacontest check <file> <problem id>` -- upload and wait for result
+
 `yacontest send foo.cpp A` sends the contents of `foo.cpp` as a solution for problem A in the selected contest
 
 #### Show status of the last solution
