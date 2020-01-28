@@ -11,10 +11,11 @@ def print_usage(args=None):
     print('Available commands:')
     print('    config  -  create config file in interactive mode')
     print('    select <contest id>  -  choose a contest')
+    print('    load  -  save all problem statements to ./problems/')
     print('    send <file> <problem id>  -  upload a solution')
     print('    check <file> <problem id>  -  upload a solution and wait for result')
-    print('    leaderboard [page]-  show current leaderboard')
     print('    status <problem id>  -  show status of the last solution')
+    print('    leaderboard [page]-  show current leaderboard')
     print('    help  -  print this message')
 
 
@@ -31,6 +32,10 @@ def select(args):
         print('ERROR: Contest id must be a number')
         sys.exit(1)
     config.select(int(c_id))
+
+
+def load_problems(args):
+    Client().load_problems()
 
 
 def _send(args, wait):
@@ -50,6 +55,14 @@ def send(args):
     _send(args, False)
 
 
+def status(args):
+    if not args:
+        print('ERROR: Problem id is not specified')
+        sys.exit(1)
+    problem = args[0]
+    Client().show_status(problem)
+
+
 def leaderboard(args):
     if not args:
         page = '1'
@@ -61,16 +74,17 @@ def leaderboard(args):
     Client().show_leaderboard(int(page))
 
 
-def status(args):
-    if not args:
-        print('ERROR: Problem id is not specified')
-        sys.exit(1)
-    problem = args[0]
-    Client().show_status(problem)
-
-
 def main():
-    cmds = {'config': create_config, 'select': select, 'send': send, 'check': check, 'leaderboard': leaderboard, 'status': status, 'help': print_usage}
+    cmds = {
+            'config': create_config,
+            'select': select,
+            'load': load_problems,
+            'send': send,
+            'check': check,
+            'status': status,
+            'leaderboard': leaderboard,
+            'help': print_usage
+           }
     args = sys.argv
     if len(args) == 1 or args[1] not in cmds:
         print_usage()

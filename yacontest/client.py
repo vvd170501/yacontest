@@ -6,8 +6,10 @@ from time import time, sleep
 
 import requests
 from bs4 import BeautifulSoup as BS
+from html2text import HTML2Text as H2T
 
 from .config import get_cfg, set_cfg
+from .utils import clean_dir
 
 
 class SolutionStatus():
@@ -36,6 +38,54 @@ class SolutionStatus():
         if self.score:
             msg += f', Score: {self.score}'
         return msg
+
+
+class Statement():
+    def __init__(self, html):
+        h2t = H2T()
+        h2t.use_automatic_links = True
+        h2t.mark_code = True
+        h2t.body_width = 100
+        h2t.protect_links = True
+        delim = '\n' + '=' * 20 + '\n'
+        test_delim = '\n' + '-' * 20 + '\n'
+        try:
+            title = html.find('', class_='title').text.strip()
+            limits = ''
+            tl_el = html.find('tr', class_='time-limit')
+            if tl_el is not None:
+                limits = '\n'.join(': '. join(cell.text.strip() for cell in row.find_all('td')) for row in tl_el.parent.find_all('tr'))
+            legend = ''
+            legend_el = html.find(class_='legend')
+            if legend_el is not None:
+                legend = h2t.handle(str(legend_el)).strip()
+            inspec = ''
+            is_el = html.find(class_='input-specification')
+            if is_el is not None:
+                hdr = is_el.find_previous_sibling()
+                inspec = '\n'.join([hdr.text.strip(), h2t.handle(str(is_el)).strip()])
+            outspec = ''
+            os_el = html.find(class_='output-specification')
+            if os_el is not None:
+                hdr = os_el.find_previous_sibling()
+                outspec = '\n'.join([hdr.text.strip(), h2t.handle(str(os_el)).strip()])
+            notes = ''
+            notes_el = html.find(class_='notes')
+            if notes_el is not None:
+                hdr = notes_el.find_previous_sibling()
+                notes = '\n'.join([hdr.text.strip(), h2t.handle(str(notes_el)).strip()])
+            test_data = [[cell.text.strip() for cell in test.find_all('tr')[1].find_all('td')] for test in html.find_all('table', class_='sample-tests')]
+            tests = test_delim.join('\n'.join(['>' * 10, in_, '<' * 10, out]) for (in_, out) in test_data)
+            self.fields = [title, limits, legend, inspec, outspec, notes, tests]
+            self.descr = delim.join([e for e in self.fields if e])
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            self.fields = []
+            self.descr = delim.join('ERROR: problem statement was not loaded', str(e))
+
+    def __str__(self):
+        return self.descr
 
 
 class Client():
@@ -138,7 +188,29 @@ class Client():
         self.cfg['problems'] = self.problems
         set_cfg(self.cfg)
         return self.problems
-        
+
+    def load_problems(self):
+        dirname = os.path.join(os.getcwd(), 'problems')
+        if os.path.exists(dirname):
+            if os.path.isdir(dirname):
+                if input('"./problems" already exists! Overwrite? [yN]: ').lower().startswith('y'):
+                    clean_dir(dirname)
+                else:
+                    return
+            else:
+                print('"ERROR: ./problems" is not a directory! Delete/rename it manually to continue')
+                return
+        else:
+            os.mkdir(dirname)
+        print('Loading problem list...')
+        problems = self._get_problems()
+        for pid, url in problems.items():
+            print(f'Downloading problem {pid}...')
+            r = self._req_get(url)
+            soup = BS(r.text, "html.parser")
+            statement = Statement(soup.find("div", class_="problem-statement"))
+            with open(os.path.join(dirname, f'{pid}.txt'), 'w') as f:
+                f.write(str(statement) + '\n')
 
     def submit(self, problem, filename, wait):
         problem = problem.lower()

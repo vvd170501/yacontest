@@ -18,15 +18,17 @@ pip install --user .
 #### Select a contest
 If the contest URL is https://official.contest.yandex.ru/contest/123, use `yacontest select 123`
 
+#### Save problem statements (text only)
+`yacontest load` -- saves all statements to `./problems/`
+
 #### Upload a solution
 `yacontest send <file> <problem id>` -- upload and exit
 `yacontest check <file> <problem id>` -- upload and wait for result
-You should use the same problem ids as in the selected contest (not indexes, but parts of problem names)
-`yacontest send foo.cpp 1` sends the contents of `foo.cpp` as a solution for the first problem in the selected contest
-
-#### Show leaderboard
-`yacontest leaderboard [page]`
+`yacontest send foo.cpp A` sends the contents of `foo.cpp` as a solution for problem A in the selected contest
 
 #### Show status of the last solution
 `yacontest status <problem id>`
+
+#### Show leaderboard
+`yacontest leaderboard [page]`
 
