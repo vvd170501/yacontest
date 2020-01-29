@@ -1,5 +1,6 @@
 import os
 import sys
+from base64 import b64decode
 from getpass import getpass
 from urllib.parse import urlparse, parse_qs
 from time import time, sleep
@@ -42,11 +43,20 @@ class SolutionStatus():
 
 class Statement():
     def __init__(self, html):
+        images = html.find_all('img')
+        tex_path = '/testsys/tex/render/'
+        for im in images:
+            src_path = urlparse(im['src']).path
+            if src_path.startswith(tex_path):
+                im.replace_with('$' + b64decode(src_path.rstrip('.png').lstrip(tex_path)).decode() + '$')
         h2t = H2T()
         h2t.use_automatic_links = True
         h2t.mark_code = True
         h2t.body_width = 100
         h2t.protect_links = True
+        def tomd(tag):
+            return h2t.handle(str(tag)).strip().replace('\\-', '-').replace('\\+', '+')
+
         delim = '\n' + '=' * 20 + '\n'
         test_delim = '\n' + '-' * 20 + '\n'
         try:
@@ -58,22 +68,22 @@ class Statement():
             legend = ''
             legend_el = html.find(class_='legend')
             if legend_el is not None:
-                legend = h2t.handle(str(legend_el)).strip()
+                legend = tomd(legend_el)
             inspec = ''
             is_el = html.find(class_='input-specification')
             if is_el is not None:
                 hdr = is_el.find_previous_sibling()
-                inspec = '\n'.join([hdr.text.strip(), h2t.handle(str(is_el)).strip()])
+                inspec = '\n'.join([hdr.text.strip(), tomd(is_el)])
             outspec = ''
             os_el = html.find(class_='output-specification')
             if os_el is not None:
                 hdr = os_el.find_previous_sibling()
-                outspec = '\n'.join([hdr.text.strip(), h2t.handle(str(os_el)).strip()])
+                outspec = '\n'.join([hdr.text.strip(), tomd(os_el)])
             notes = ''
             notes_el = html.find(class_='notes')
             if notes_el is not None:
                 hdr = notes_el.find_previous_sibling()
-                notes = '\n'.join([hdr.text.strip(), h2t.handle(str(notes_el)).strip()])
+                notes = '\n'.join([hdr.text.strip(), tomd(notes_el)])
             test_data = [[cell.text for cell in test.find_all('tr')[1].find_all('td')] for test in html.find_all('table', class_='sample-tests')]
             tests = test_delim.join('\n'.join(['>' * 10, in_, '<' * 10, out]) for (in_, out) in test_data)
             self.fields = [title, limits, legend, inspec, outspec, notes, tests]

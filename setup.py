@@ -13,7 +13,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='yacontest',
-    version='1.2.1',
+    version='1.2.2',
     description='console utility for Yandex.Contest',
     long_description=long_description,
     url='https://github.com/vvd170501/yacontest',
