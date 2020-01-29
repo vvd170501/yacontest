@@ -74,7 +74,7 @@ class Statement():
             if notes_el is not None:
                 hdr = notes_el.find_previous_sibling()
                 notes = '\n'.join([hdr.text.strip(), h2t.handle(str(notes_el)).strip()])
-            test_data = [[cell.text.strip() for cell in test.find_all('tr')[1].find_all('td')] for test in html.find_all('table', class_='sample-tests')]
+            test_data = [[cell.text for cell in test.find_all('tr')[1].find_all('td')] for test in html.find_all('table', class_='sample-tests')]
             tests = test_delim.join('\n'.join(['>' * 10, in_, '<' * 10, out]) for (in_, out) in test_data)
             self.fields = [title, limits, legend, inspec, outspec, notes, tests]
             self.descr = delim.join([e for e in self.fields if e])
