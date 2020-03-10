@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from base64 import b64decode
 from getpass import getpass
@@ -47,8 +48,9 @@ class Statement():
         tex_path = '/testsys/tex/render/'
         for im in images:
             src_path = urlparse(im['src']).path
-            if src_path.startswith(tex_path):
-                im.replace_with('$' + b64decode(src_path.rstrip('.png').lstrip(tex_path)).decode() + '$')
+            m = re.match(tex_path + r'(.*)\..*', src_path)
+            if m:
+                im.replace_with('$' + b64decode(m.group(1)).decode() + '$')
         h2t = H2T()
         h2t.use_automatic_links = True
         h2t.mark_code = True
