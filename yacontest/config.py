@@ -2,14 +2,26 @@ import pickle
 import sys
 from getpass import getpass
 from pkg_resources import resource_filename
+from shutil import copyfile
 
 cfg_file = resource_filename(__name__, 'data/config')
+cfg_backup = resource_filename(__name__, 'data/config.bak')  # used for updates
 
 
 def get_cfg(noexit=False):
+    def restore_backup():
+        try:
+            with open(cfg_backup, 'rb') as f:
+                data = f.read()
+        except FileNotFoundError:
+            data = b''
+        if data != b'':
+             copyfile(cfg_backup, cfg_file)
+        return data
+
     with open(cfg_file, 'rb') as f:
-        data = f.read()
-    if data.strip() == b'':
+        data = f.read() or restore_backup()
+    if data == b'':
         if noexit:
             return None
         print('ERROR: Config not found, run "yacontest config" first')
@@ -21,6 +33,7 @@ def get_cfg(noexit=False):
 def set_cfg(cfg):
     with open(cfg_file, 'wb') as f:
         pickle.dump(cfg, f)
+    copyfile(cfg_file, cfg_backup)
 
 
 def create():
