@@ -4,6 +4,8 @@ from getpass import getpass
 from pkg_resources import resource_filename
 from shutil import copyfile
 
+from .utils import choice
+
 cfg_file = resource_filename(__name__, 'data/config')
 cfg_backup = resource_filename(__name__, 'data/config.bak')  # used for updates
 
@@ -44,13 +46,8 @@ def create():
         contest = cfg['contest']
     else:
         contest = 0
-    print('Choose the domain:\n1) official.contest.yandex.ru\n2) contest.yandex.ru')
-    choice = input('Domain (1/2): ')
-    if choice == '1':
-        domain = 'official.contest.yandex.ru'
-    elif choice == '2':
-        domain = 'contest.yandex.ru'
-    else:
+    domain = choice('Choose the domain:', ['official.contest.yandex.ru', 'contest.yandex.ru'])
+    if domain is None:
         print('ERROR: Invalid choice, try again')
         sys.exit(1)
     login = input('Login: ')

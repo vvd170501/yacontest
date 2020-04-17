@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup as BS
 from html2text import HTML2Text as H2T
 
 from .config import get_cfg, set_cfg
-from .utils import clean_dir
+from .utils import clean_dir, choice
 
 
 class SolutionStatus():
@@ -34,7 +34,7 @@ class SolutionStatus():
         self.checked = not self.testing and not self.text.startswith('Ожидание') #TODO check correctness
 
     def __str__(self):
-        msg = f'SOlution {self.sid}: {self.text}, Time: {self.time}, Mem: {self.mem}'
+        msg = f'Solution {self.sid}: {self.text}, Time: {self.time}, Mem: {self.mem}'
         if self.test:
             msg += f', Failed test: {self.test}'
         if self.score:
@@ -224,7 +224,9 @@ class Client():
             with open(os.path.join(dirname, f'{pid}.txt'), 'w') as f:
                 f.write(str(statement) + '\n')
 
-    def submit(self, problem, filename, wait):
+    def submit(self, problem, filename, wait, compiler=None):
+        if compiler is None:  # TODO add flag / config option
+            compiler = self.cfg.get('compiler')
         problem = problem.lower()
         if not os.path.isfile(filename):
             print('ERROR: File not found')
@@ -237,19 +239,38 @@ class Client():
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")
         form = soup.find_all('form')[-1]
-        fields = form.find_all('input')
         formdata = {}
         file_field = None
-        for el in fields:
+        compiler_choice = True
+        for el in form.find_all('input'):
             name = el['name']
             if name.endswith('solution'):
                 formdata[name] = 'file'
             elif name.endswith('compiler'):
-                formdata[name] = el['value'] #TODO support multi-choice
+                formdata[name] = el['value']
+                compiler_choice = False
             elif name.endswith('file'):
                 file_field = name
             else:
                 formdata[name] = el['value']
+        if compiler_choice:
+            for el in form.find_all('select'):
+                name = el['name']
+                if name.endswith('compilerId'):
+                    available = {}
+                    for comp in el.find_all('option'):
+                        if comp.text == compiler:
+                            formdata[name] = comp['value']
+                            break
+                        available[comp.text] = comp['value']
+                    else:
+                        compiler = choice('Select a language/compiler:', list(available.keys()))
+                        if compiler is not None:
+                            formdata[name] = available[compiler]
+                        else:
+                            print('Incorrect choice, try again')
+                            sys.exit(1)
+                    break
         url = self.prefix + '/submit/'
         r = self.http.post(url, data=formdata, files={file_field: (filename, open(filename, 'r'))})
         err = parse_qs(urlparse(r.url).query).get('error')
