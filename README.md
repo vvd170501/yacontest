@@ -18,15 +18,28 @@ pip install --user .
 #### Select a contest
 If the contest URL is https://official.contest.yandex.ru/contest/123, use `yacontest select 123`
 
+#### Select/reset/show preferred compiler/language
+`yacontest lang "language name"`
+
+`yacontest lang list` for interactive choice (you need to select a contest first)
+
+`yacontest lang reset`
+
+`yacontest lang` -- show selected language
+
+some of available languages/compilers: `GCC C++17`, `GNU c++17 7.3`, `Python 3.4` (should be exactly the same as shown in the contest webpage or one-time choice dialogue)
+
 #### Save problem statements (text only)
 `yacontest load` -- saves all statements to `./problems/`
 
 #### Upload a solution
-`yacontest send <file> <problem id>` -- upload and exit
+`yacontest send <file> <problem id> [--lang "language/compiler"]` -- upload and exit
 
-`yacontest check <file> <problem id>` -- upload and wait for result
+`yacontest check <file> <problem id> [--lang "..."]` -- upload and wait for result
 
 `yacontest send foo.cpp A` sends the contents of `foo.cpp` as a solution for problem A in the selected contest
+
+lang option, if used, should be exactly the same as in one-time choice dialogue
 
 #### Show status of the last solution
 `yacontest status <problem id>`

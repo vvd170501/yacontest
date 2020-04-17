@@ -64,3 +64,12 @@ def select(contest_id):
     cfg.pop('problems', None)
     set_cfg(cfg)
     print('Success!')
+
+def lang(name):
+    cfg = get_cfg()
+    if name is not None:
+        cfg['lang'] = name
+    else:
+        cfg.pop('lang', None)
+    set_cfg(cfg)
+    print('Success!')

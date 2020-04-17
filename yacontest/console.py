@@ -11,10 +11,12 @@ def print_usage(args=None):
     print('Available commands:')
     print('    config  -  create config file in interactive mode')
     print('    select <contest id>  -  choose a contest')
+    print('    lang "..."  -  choose/reset preferred language / compiler')
+    print('    lang  -  show selected language / compiler')
     print('    load  -  save all problem statements to ./problems/')
     print('    send <file> <problem id>  -  upload a solution')
-    print('    check <file> <problem id>  -  upload a solution and wait for result')
-    print('    status <problem id>  -  show status of the last solution')
+    print('    check <file> <problem id> [--lang "..."]  -  upload a solution and wait for result')
+    print('    status <problem id> [--lang "..."]   -  show status of the last solution')
     print('    leaderboard [page]-  show current leaderboard')
     print('    help  -  print this message')
 
@@ -34,6 +36,18 @@ def select(args):
     config.select(int(c_id))
 
 
+def lang(args):
+    if not args:
+        cfg = config.get_cfg()
+        print(cfg.get('lang', 'No language selected'))
+        return
+    choice = args[0]
+    if choice == 'list':
+        Client().choose_lang()
+    else:
+        config.lang(choice if choice.lower() != 'reset' else None)
+
+
 def load_problems(args):
     Client().load_problems()
 
@@ -43,7 +57,11 @@ def _send(args, wait):
         print('ERROR: Not enough options, check usage')
         sys.exit(1)
     fname, problem = args[:2]
-    Client().submit(problem, fname, wait)
+    if len(args) > 3 and args[2] == '--lang':
+        lang = args[3]
+    else:
+        lang = None
+    Client().submit(problem, fname, wait, lang)
 
 
 
@@ -78,6 +96,7 @@ def main():
     cmds = {
             'config': create_config,
             'select': select,
+            'lang': lang,
             'load': load_problems,
             'send': send,
             'check': check,

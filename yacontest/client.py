@@ -225,8 +225,8 @@ class Client():
                 f.write(str(statement) + '\n')
 
     def submit(self, problem, filename, wait, compiler=None):
-        if compiler is None:  # TODO add flag / config option
-            compiler = self.cfg.get('compiler')
+        if compiler is None:
+            compiler = self.cfg.get('lang')
         problem = problem.lower()
         if not os.path.isfile(filename):
             print('ERROR: File not found')
@@ -258,12 +258,17 @@ class Client():
                 name = el['name']
                 if name.endswith('compilerId'):
                     available = {}
+                    if compiler is not None:
+                        compiler = re.sub(r'\s+', ' ', compiler)
                     for comp in el.find_all('option'):
-                        if comp.text == compiler:
+                        cname = re.sub(r"\s+", ' ', comp.text)
+                        if cname == compiler:
                             formdata[name] = comp['value']
                             break
-                        available[comp.text] = comp['value']
+                        available[cname] = comp['value']
                     else:
+                        if compiler is not None:
+                            print('Unknown language: {}'.format(compiler))
                         compiler = choice('Select a language/compiler:', list(available.keys()))
                         if compiler is not None:
                             formdata[name] = available[compiler]
@@ -320,3 +325,26 @@ class Client():
         print(status)
         if status.ce:
             print(self._status_details(status))
+
+    def choose_lang(self):  # TODO refactor
+        url = sorted(self._get_problems().values())[0]
+        r = self._req_get(url)
+        soup = BS(r.text, "html.parser")
+        form = soup.find_all('form')[-1]
+        for el in form.find_all('input'):
+            name = el['name']
+            if name.endswith('compiler'):
+                print('ERROR: No available languages!')
+                return
+        for el in form.find_all('select'):
+            name = el['name']
+            if name.endswith('compilerId'):
+                available = {re.sub(r"\s+", ' ', comp.text): comp['value'] for comp in el.find_all('option')}
+                compiler = choice('Select a language/compiler:', list(available.keys()))
+                if compiler is not None:
+                    self.cfg['lang'] = compiler
+                    set_cfg(self.cfg)
+                else:
+                    print('Incorrect choice, try again')
+                    sys.exit(1)
+                break
