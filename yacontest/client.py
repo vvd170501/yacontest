@@ -246,7 +246,7 @@ class Client():
             name = el['name']
             if name.endswith('solution'):
                 formdata[name] = 'file'
-            elif name.endswith('compiler'):
+            elif name.endswith('compiler') or name.endswith('compilerId'):
                 formdata[name] = el['value']
                 compiler_choice = False
             elif name.endswith('file'):
@@ -333,7 +333,7 @@ class Client():
         form = soup.find_all('form')[-1]
         for el in form.find_all('input'):
             name = el['name']
-            if name.endswith('compiler'):
+            if name.endswith('compiler') or name.endswith('compilerId'):
                 print('ERROR: No available languages!')
                 return
         for el in form.find_all('select'):
