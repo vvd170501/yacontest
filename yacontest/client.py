@@ -310,7 +310,14 @@ class Client():
             print('No results, try another page...')
             return
         data = [tr.find_all('td') for tr in table.find_all('tr')[1:]]
-        text = [[row[0].text, row[1].text, *[el.find('div').text for el in row[2:-1]], row[-1].text] for row in data]
+        last_task = None # element after last task
+        if data:
+            row = data[0]
+            for i in range(2, len(row)):
+                if row[i].find('div') is None:
+                    last_task = i
+                    break
+        text = [[row[0].text, row[1].text, *[el.find('div').text for el in row[2:last_task]], *[el.text for el in row[last_task:]]] for row in data]
         cell_sizes = [max(map(len, col)) for col in zip(*text)]
         lines = []
         fmtstr = '  '.join(['{{:{}s}}'.format(sz) for sz in cell_sizes])
