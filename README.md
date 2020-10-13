@@ -47,3 +47,9 @@ lang option, if used, should be exactly the same as in one-time choice dialogue
 #### Show leaderboard
 `yacontest leaderboard [page]`
 
+#### Download solutions
+`yacontest loadcode [id1,id2,...]` -- download latest accepted solutions for contests with listed ids
+
+`yacontest loadcode` -- download solutions for the selected contest
+
+Solutions are saved as `./solutions/contest_id/task_id`

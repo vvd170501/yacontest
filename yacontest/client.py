@@ -19,7 +19,7 @@ class SolutionStatus():
         for k, v in zip(titles, values):
             if k == 'ID':
                 self.sid = v
-            elif k == 'Вердикт':
+            elif k == 'Вердикт':  # TODO add english?
                 self.text = v
             elif k == 'Время':
                 self.time = v
@@ -31,12 +31,13 @@ class SolutionStatus():
                 self.score = v if v != '-' else ''
         self.ce = self.text == 'CE' or self.text == 'PCF'
         self.testing = self.text == 'Тестируется'
-        self.checked = not self.testing and not self.text.startswith('Ожидание') #TODO check correctness
+        self.checked = not self.testing and not self.text.startswith('Ожидание')  # assuming there are only 2 incomplete states
 
     def __str__(self):
         msg = f'Solution {self.sid}: {self.text}, Time: {self.time}, Mem: {self.mem}'
         if self.test:
-            msg += f', Failed test: {self.test}'
+            testmsg = 'Test' if self.testing else 'Failed test'
+            msg += f', {testmsg}: {self.test}'
         if self.score:
             msg += f', Score: {self.score}'
         return msg
@@ -101,13 +102,14 @@ class Statement():
 
 
 class Client():
-    def __init__(self):
+    def __init__(self, nocid=False):
         self.cfg = get_cfg()
         self.domain = self.cfg['domain']
-        self.contest = self.cfg['contest']
-        if self.contest == 0:
+        contest = self.cfg['contest']
+        if contest == 0 and not nocid:
             print('ERROR: No contest was selected. Run "yacontest select <id>" first')
             sys.exit(1)
+        self._select(contest)
         self.problems = self.cfg.get('problems')
 
         self.http = requests.Session()
@@ -115,7 +117,9 @@ class Client():
         if self.cfg.get('cookies') is not None:
             self.http.cookies = self.cfg['cookies']
 
-        self.prefix = f'https://{self.domain}/contest/{self.contest}'
+    def _select(self, cid):
+        self.contest = cid
+        self.prefix = f'https://{self.domain}/contest/{cid}'
 
     def _check_result(self, r):
         return urlparse(r.url).path != f'/contest/{self.contest}/enter/'
@@ -178,7 +182,7 @@ class Client():
         titles = [e.text for e in rows[0].find_all('th')]
         cells = [e.text for e in rows[1].find_all('td')]
         return SolutionStatus(titles, cells)
-        
+ 
     def _status_details(self, status):
         url = self.prefix + f'/run-report/{status.sid}/'
         r = self._req_get(url)
@@ -196,7 +200,7 @@ class Client():
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")
         problems = soup.find_all('ul')[-1]
-        self.problems = {e.find('a')['href'].split('/')[-2].lower(): 'https://' + self.domain + e.find('a')['href'] for e in problems.find_all('li')} #TODO optimize? check keys (url without trailing /)
+        self.problems = {e.find('a')['href'].split('/')[-2].lower(): 'https://' + self.domain + e.find('a')['href'] for e in problems.find_all('li')}  # NOTE assuming that url doesn't include domain and ends with "/", does YC guarantee this?
         self.cfg['problems'] = self.problems
         set_cfg(self.cfg)
         return self.problems
@@ -205,12 +209,12 @@ class Client():
         dirname = os.path.join(os.getcwd(), 'problems')
         if os.path.exists(dirname):
             if os.path.isdir(dirname):
-                if input('"./problems" already exists! Overwrite? [yN]: ').lower().startswith('y'):
+                if input('"./problems/" already exists! Overwrite? [yN]: ').lower().startswith('y'):
                     clean_dir(dirname)
                 else:
                     return
             else:
-                print('"ERROR: ./problems" is not a directory! Delete/rename it manually to continue')
+                print('ERROR: "./problems" is not a directory! Delete/rename it manually to continue')
                 return
         else:
             os.mkdir(dirname)
@@ -223,6 +227,73 @@ class Client():
             statement = Statement(soup.find("div", class_="problem-statement"))
             with open(os.path.join(dirname, f'{pid}.txt'), 'w') as f:
                 f.write(str(statement) + '\n')
+
+    def load_code(self, ids=[]):
+        if not ids:
+            ids = [self.contest]
+
+        basedir = os.path.join(os.getcwd(), 'solutions')
+        if os.path.exists(basedir):
+            if not os.path.isdir(basedir):
+                print('ERROR: "./solutions" is not a directory! Delete/rename it manually to continue')
+                return
+        else:
+            os.mkdir(basedir)
+
+        for cid in ids:
+            dirname = os.path.join(basedir, str(cid))
+            if os.path.exists(dirname):
+                if os.path.isdir(dirname):
+                    if input(f'"./solutions/{cid}/" already exists! Overwrite? [yN]: ').lower().startswith('y'):
+                        clean_dir(dirname)
+                    else:
+                        print(f'Skipping contest {cid}')
+                        continue
+                else:
+                    print(f'ERROR: "./solutions/{cid}" is not a directory! Skipping contest {cid}')
+                    continue
+            else:
+                os.mkdir(dirname)
+
+            if self.contest != cid:  # don't reset problems if no cids were supplied
+                self.problems = None  # looks awful
+            self._select(cid)  # refactor?
+            print(f'Selected contest {cid}, downloading solutions...')
+            page = 1
+            saved_problems = set()
+            while self._dump_solutions(dirname, page, saved_problems):
+                page += 1
+
+    def _dump_solutions(self, dirname, page, saved_problems):
+        # NOTE may work incorrectly for large lists (> 100 submits, if YC uses multipage) (not tested)
+        url = self.prefix + '/submits'
+        r = self._req_get(url, params={'p': page})
+        soup = BS(r.text, "html.parser")
+        rows = soup.find_all('tr')
+        if len(rows) < 2:
+            return False
+        # TODO add option to save latest solutions if no accepted are found?
+        rows = rows[1:]
+        ext_p = re.compile(r'filename\*?=.+(\.\w+)', re.I) # NOTE assuming that extension is alphanumeric # TODO refactor? ext can be followed by a quote
+        for row in rows:
+            a_pid, a_res, a_rep = row.find_all('a') # NOTE are links always present??
+            pid = a_pid.text.lower()
+            if pid in saved_problems:
+                continue
+            result = a_res.text
+            if result != 'OK':
+                continue
+            filepath = os.path.join(dirname, pid)
+            #NOTE assuming URL doesn't include domain
+            url = 'https://' + self.domain + a_rep['href'].replace('run-report', 'download-source')  # one less request, shouldn't break until YC changes URLs
+            r = self._req_get(url)
+            matches = ext_p.findall(r.headers['content-disposition'])
+            ext = matches[0] if matches else ''
+            with open(filepath + ext, 'wb') as f:
+                f.write(r.content)
+            print(f'Loaded an accepted solution for {pid}!')
+            saved_problems.add(pid)
+        return True
 
     def submit(self, problem, filename, wait, compiler=None):
         if compiler is None:
@@ -291,7 +362,7 @@ class Client():
             while not status.checked:
                 if status.testing and not testing:
                     testing = True
-                    print('Testing...')
+                    print('Testing...')  # TODO show current test??
                 sleep(max(0, 0.5 - (time() - last_req)))
                 status = self._get_status(problem)
                 last_req = time()
@@ -333,7 +404,7 @@ class Client():
         if status.ce:
             print(self._status_details(status))
 
-    def choose_lang(self):  # TODO refactor
+    def choose_lang(self):  # TODO refactor / remove copypaste in submit()
         url = sorted(self._get_problems().values())[0]
         r = self._req_get(url)
         soup = BS(r.text, "html.parser")

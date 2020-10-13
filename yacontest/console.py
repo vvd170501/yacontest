@@ -16,8 +16,9 @@ def print_usage(args=None):
     print('    load  -  save all problem statements to ./problems/')
     print('    send <file> <problem id>  -  upload a solution')
     print('    check <file> <problem id> [--lang "..."]  -  upload a solution and wait for result')
-    print('    status <problem id> [--lang "..."]   -  show status of the last solution')
-    print('    leaderboard [page]-  show current leaderboard')
+    print('    status <problem id> [--lang "..."]  -  show status of the last solution')
+    print('    leaderboard [page]  -  show current leaderboard')
+    print('    loadcode [id1,id2,...]  -  download solutions for contests with listed ids')
     print('    help  -  print this message')
 
 
@@ -91,6 +92,16 @@ def leaderboard(args):
             sys.exit(1)
     Client().show_leaderboard(int(page))
 
+def load_code(args):
+    if args:
+        cids = [e.strip() for e in args[0].split(',')]
+        if not all(cid.isnumeric() for cid in cids):
+            print('ERROR: Invalid contest ID')
+            sys.exit(0)
+        Client(nocid=True).load_code(cids)
+    else:
+        Client().load_code()
+
 
 def main():
     cmds = {
@@ -102,7 +113,8 @@ def main():
             'check': check,
             'status': status,
             'leaderboard': leaderboard,
-            'help': print_usage
+            'help': print_usage,
+            'loadcode': load_code
            }
     args = sys.argv
     if len(args) == 1 or args[1] not in cmds:
