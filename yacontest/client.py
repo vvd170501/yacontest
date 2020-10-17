@@ -63,7 +63,7 @@ class Statement():
         delim = '\n' + '=' * 20 + '\n'
         test_delim = '\n' + '-' * 20 + '\n'
         try:
-            title = html.find('', class_='title').text.strip()
+            title = html.find(class_='title').text.strip()
             limits = ''
             tl_el = html.find('tr', class_='time-limit')
             if tl_el is not None:
@@ -95,7 +95,7 @@ class Statement():
             raise
         except Exception as e:
             self.fields = []
-            self.descr = delim.join('ERROR: problem statement was not loaded', str(e))
+            self.descr = delim.join(['ERROR: problem statement was not loaded', str(e)])
 
     def __str__(self):
         return self.descr
