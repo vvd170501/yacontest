@@ -15,6 +15,8 @@ from .utils import clean_dir, choice
 
 
 class SolutionStatus():
+    fin_re = re.compile(r'[A-Z]{2,3}') #  NOTE should be correct
+
     def __init__(self, titles, values):
         for k, v in zip(titles, values):
             if k == 'ID':
@@ -30,8 +32,9 @@ class SolutionStatus():
             elif k == 'Баллы':
                 self.score = v if v != '-' else ''
         self.ce = self.text == 'CE' or self.text == 'PCF'
-        self.testing = self.text == 'Тестируется'
-        self.checked = not self.testing and not self.text.startswith('Ожидание')  # assuming there are only 2 incomplete states
+        # "Частичное решение" == "Тестируется"?
+        self.checked = SolutionStatus.fin_re.match(self.text) is not None
+        self.testing = not self.checked and not self.text.startswith('Ожидание')
 
     def __str__(self):
         msg = f'Solution {self.sid}: {self.text}, Time: {self.time}, Mem: {self.mem}'
