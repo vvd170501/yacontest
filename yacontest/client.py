@@ -318,13 +318,13 @@ class Client():
         compiler_choice = True
         for el in form.find_all('input'):
             name = el['name']
-            if name.endswith('solution'):
+            if el.get('type') == 'file':
+                file_field = name
+            elif name.endswith('solution'):
                 formdata[name] = 'file'
             elif name.endswith('compiler') or name.endswith('compilerId'):
                 formdata[name] = el['value']
                 compiler_choice = False
-            elif name.endswith('file'):
-                file_field = name
             else:
                 formdata[name] = el['value']
         if compiler_choice:
